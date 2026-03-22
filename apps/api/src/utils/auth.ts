@@ -5,6 +5,7 @@ import env from '../config/env.js';
 
 export type JwtPayload = {
     sub: string;
+    profileId: string;
     email: string;
     type: "access" | "refresh";
     iat?: number;
@@ -22,7 +23,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 
 // JWT TOKENS UTILS
 export function signJwtToken(
-    payload: Pick<JwtPayload, "sub" | "email">,
+    payload: Pick<JwtPayload, "sub" | "email" | "profileId">,
     type: "access" | "refresh",
     expiresIn: SignOptions["expiresIn"] = "15m"
 ): string {
@@ -32,7 +33,7 @@ export function signJwtToken(
         throw new Error("Server misconfigured");
     }
     return jwt.sign(
-        { sub: payload.sub, email: payload.email, type },
+        { sub: payload.sub, email: payload.email, profileId: payload.profileId, type },
         secret,
         { algorithm: "HS256", expiresIn }
     );
@@ -48,7 +49,7 @@ export function verifyJwtToken(token: string, type: "access" | "refresh"): JwtPa
         throw new Error("Invalid token");
     }
     const o = decoded as Record<string, unknown>;
-    if (typeof o.sub !== "string" || typeof o.email !== "string" || o.type !== type) {
+    if (typeof o.sub !== "string" || typeof o.email !== "string" || typeof o.profileId !== "string" || o.type !== type) {
         throw new Error("Invalid token");
     }
     return decoded as JwtPayload;

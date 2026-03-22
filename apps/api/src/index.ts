@@ -3,6 +3,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { connectDB, disconnectDB } from "./config/db.js";
 import authRouter from "./routes/auth.js";
+import documentRouter from "./routes/documents.js";
+import collaboratorRouter from "./routes/collaborator.js";
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
@@ -15,6 +17,8 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "api" });
 });
 app.use("/api/auth", authRouter);
+app.use("/api/documents", documentRouter);
+app.use("/api/documents/:documentId/collaborators", collaboratorRouter);
 
 connectDB().then(() => {
   app.listen(port, () => {

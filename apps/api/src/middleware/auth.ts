@@ -14,7 +14,7 @@ export const requireAuth: RequestHandler = (req, res, next) => {
     }
     try {
         const payload = verifyJwtToken(token, "access");
-        req.user = { sub: payload.sub, email: payload.email };
+        req.user = { sub: payload.sub, email: payload.email, profileId: payload.profileId };
         next();
     } catch {
         return res.status(401).json({ error: "Unauthorized" });

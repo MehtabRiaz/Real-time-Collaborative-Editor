@@ -64,7 +64,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const profile = await Profile.findOne({userId: user._id});
-        const params = {sub: user._id.toString(), email: user.email};
+        const params = {sub: user._id.toString(), email: user.email, profileId: profile?._id.toString()};
         const accessToken = signJwtToken(params, "access", "15m");
         const refreshToken = signJwtToken(params, "refresh", "7d");
         setRefreshCookie(res, refreshToken);
@@ -98,8 +98,8 @@ export const refresh = async (req: Request, res: Response) => {
             return res.status(401).json({error: "Unauthorized"});
         }
         const payload = verifyJwtToken(token, "refresh");
-        const accessToken = signJwtToken({sub: payload.sub, email: payload.email}, "access", "15m");
-        const refreshToken = signJwtToken({sub: payload.sub, email: payload.email}, "refresh", "7d");
+        const accessToken = signJwtToken({sub: payload.sub, email: payload.email, profileId: payload.profileId}, "access", "15m");
+        const refreshToken = signJwtToken({sub: payload.sub, email: payload.email, profileId: payload.profileId}, "refresh", "7d");
         setRefreshCookie(res, refreshToken);
         res.status(200).json({ accessToken });
     } catch (error) {

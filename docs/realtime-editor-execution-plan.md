@@ -9,25 +9,27 @@ overview: Execution-ready plan for your MERN collaborative editor setup, with th
 
 - Monorepo scaffold is in place (`apps/web`, `apps/api`, `apps/realtime`, `packages/shared`).
 - Turbo + workspace wiring is mostly done.
-- **Phase 1 (Auth foundation) implemented** — see [ADR-0001: Authentication](adr/0001-authentication.md).
+- **Phase 1 (Auth foundation)** — see [ADR-0001: Authentication](adr/0001-authentication.md). JWTs include **`profileId`** (Profile id) for resource ACL.
+- **Phase 2 (Document CRUD + ACL)** — implemented in **`apps/api`**: `Document` + `Collaborator` models, REST CRUD on `/api/documents`, nested `/api/documents/:documentId/collaborators`, ACL in **`documentAcl.ts`** (403/404 via **`catchAcl`**). See [README.md](../README.md) for route tables.
 - Basic Realtime server boots; shared package entrypoint exists.
 
-## Next Step To Start (Phase 2)
+## Next Step To Start (Phase 3)
 
-- **Document CRUD + ACL** in `apps/api` (`owner` / `editor` / `viewer`).
-- Wire authorization before exposing collaborative editing APIs.
+- **Realtime room plumbing:** WebSocket auth (validate access JWT), join/leave by `documentId`, presence events.
+- Reuse **`profileId` / document ACL** concepts when authorizing room access.
 
 ## Phase 1 - Auth Foundation — Done
 
-- API: `mongoose`, `bcryptjs`, `dotenv`; Mongo connection; User + Profile models.
-- Auth: access JWT (Bearer) + refresh JWT (httpOnly cookie `token`); `POST /register`, `/login`, `/logout`, `/refresh`, `GET /me` under `/api/auth`.
+- API: `mongoose`, `bcryptjs`, `dotenv`; Mongo connection; **User** + **Profile** models.
+- Auth: access JWT (`Authorization: Bearer`) + refresh JWT (httpOnly cookie `token`); claims include **`sub`**, **`email`**, **`profileId`**.
+- Endpoints: `POST /register`, `/login`, `/logout`, `/refresh`, `GET /me` under `/api/auth`.
 - ADR: [docs/adr/0001-authentication.md](adr/0001-authentication.md)
 
-## Phase 2 - Document CRUD + ACL
+## Phase 2 - Document CRUD + ACL — Done (API)
 
-- Create document model with owner/collaborators/role metadata.
-- Implement CRUD endpoints with permission enforcement.
-- Add role checks: `owner`, `editor`, `viewer`.
+- **Models:** `Document` (owner → Profile `ownerId`); `Collaborator` (`documentId`, `profileId`, `editor` \| `viewer`).
+- **Routes:** `/api/documents` (CRUD + list with permissions); `/api/documents/:documentId/collaborators` (list / get / add / update / remove).
+- **ACL:** Owner full control; **editor** can write document content; **viewer** read-only; collaborator mutations **owner-only**; `documentAcl` + **`catchAcl`** for HTTP status mapping.
 
 ## Phase 3 - Realtime Room Plumbing
 
@@ -57,10 +59,16 @@ overview: Execution-ready plan for your MERN collaborative editor setup, with th
 - `MONGO_URI` (Atlas or local; path must be `/dbname` not `?dbname`)
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
 - `REDIS_URL`
-- `API_PORT`, `RT_PORT`, `WEB_PORT`, `NODE_ENV`
+- `PORT` / `API_PORT`, `RT_PORT`, `WEB_PORT`, `NODE_ENV`
 
-## Done Criteria For Phase 1 (Met)
+## Done Criteria — Phase 1 (Met)
 
 - Register/login/me/logout/refresh work against the API.
 - Access token validated by `requireAuth`; refresh validated on `/refresh`.
 - API connects to MongoDB (Atlas replica set recommended for transactions).
+
+## Done Criteria — Phase 2 (API, Met)
+
+- Authenticated users can create documents and are **owners** (`ownerId` = JWT `profileId`).
+- Users can list/read/update/delete per role rules; **403** / **404** from ACL when appropriate.
+- Collaborators can be managed by **owner** on nested routes; **Collaborator** `_id` used for get/update/delete by id.

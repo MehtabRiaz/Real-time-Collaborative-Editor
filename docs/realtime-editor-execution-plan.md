@@ -9,25 +9,19 @@ overview: Execution-ready plan for your MERN collaborative editor setup, with th
 
 - Monorepo scaffold is in place (`apps/web`, `apps/api`, `apps/realtime`, `packages/shared`).
 - Turbo + workspace wiring is mostly done.
-- Basic API and Realtime servers boot.
-- Shared package entrypoint exists.
+- **Phase 1 (Auth foundation) implemented** — see [ADR-0001: Authentication](adr/0001-authentication.md).
+- Basic Realtime server boots; shared package entrypoint exists.
 
-## Next Step To Start (Do This First)
+## Next Step To Start (Phase 2)
 
-- **Start with Auth foundation in `apps/api`**.
-- This unlocks secure document access and websocket authorization for all later features.
+- **Document CRUD + ACL** in `apps/api` (`owner` / `editor` / `viewer`).
+- Wire authorization before exposing collaborative editing APIs.
 
-## Phase 1 - Auth Foundation (Start Here)
+## Phase 1 - Auth Foundation — Done
 
-- Add API dependencies: `mongoose`, `bcryptjs`, `dotenv`.
-- Add env validation and boot checks for `MONGO_URI` + `JWT_SECRET`.
-- Add Mongo connection on API startup.
-- Implement user model and auth routes:
-  - `POST /auth/register`
-  - `POST /auth/login`
-  - `GET /auth/me` (protected)
-  - `POST /auth/logout`
-- Use JWT in httpOnly cookie (`sameSite=lax`, secure in production).
+- API: `mongoose`, `bcryptjs`, `dotenv`; Mongo connection; User + Profile models.
+- Auth: access JWT (Bearer) + refresh JWT (httpOnly cookie `token`); `POST /register`, `/login`, `/logout`, `/refresh`, `GET /me` under `/api/auth`.
+- ADR: [docs/adr/0001-authentication.md](adr/0001-authentication.md)
 
 ## Phase 2 - Document CRUD + ACL
 
@@ -60,15 +54,13 @@ overview: Execution-ready plan for your MERN collaborative editor setup, with th
 
 ## Env Baseline
 
-- `MONGO_URI`
+- `MONGO_URI` (Atlas or local; path must be `/dbname` not `?dbname`)
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
 - `REDIS_URL`
-- `JWT_SECRET`
-- `API_PORT`
-- `RT_PORT`
-- `WEB_PORT`
+- `API_PORT`, `RT_PORT`, `WEB_PORT`, `NODE_ENV`
 
-## Done Criteria For Immediate Next Step
+## Done Criteria For Phase 1 (Met)
 
-- Register/login/me/logout works in API.
-- JWT cookie auth is validated by middleware.
-- API starts only when env + DB are valid.
+- Register/login/me/logout/refresh work against the API.
+- Access token validated by `requireAuth`; refresh validated on `/refresh`.
+- API connects to MongoDB (Atlas replica set recommended for transactions).

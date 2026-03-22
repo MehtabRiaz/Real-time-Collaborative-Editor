@@ -1,7 +1,11 @@
+# Default: `docker compose up` starts Redis only (MongoDB via Atlas).
+# Local MongoDB: `docker compose --profile local-mongo up -d`
 name: realtime-editor
 
 services:
   mongo:
+    profiles:
+      - local-mongo
     image: mongo:7
     container_name: realtime-editor-mongo
     restart: unless-stopped

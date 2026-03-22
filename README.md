@@ -6,10 +6,10 @@ The project targets Google Docs-like collaboration: multi-user editing, live cur
 ## Tech Stack
 
 - **Frontend:** React + Vite + Tailwind
-- **API:** Node.js + Express + JWT auth (planned)
-- **Realtime:** Node.js + WebSocket + Yjs
-- **Database:** MongoDB
-- **Cache/PubSub:** Redis (for scale-out)
+- **API:** Node.js + Express + JWT auth (Phase 1 complete)
+- **Realtime:** Node.js + WebSocket + Yjs (planned)
+- **Database:** MongoDB ([Atlas](https://www.mongodb.com/atlas) recommended)
+- **Cache/PubSub:** Redis (for scale-out; optional locally)
 - **Monorepo:** pnpm workspaces + Turborepo
 
 ## Monorepo Structure
@@ -23,6 +23,8 @@ packages/
   shared/     # Shared types/contracts
 docs/
   realtime-editor-execution-plan.md
+  adr/
+    0001-authentication.md
 infra/
   docker-compose.yml
 ```
@@ -31,20 +33,38 @@ infra/
 
 - Node.js (recommended: 20 LTS)
 - pnpm
-- Docker (for MongoDB/Redis local infra)
+- Docker (for Redis; optional local Mongo via compose profile)
 
 ## Environment Variables
 
-Copy `.env.example` values into your local environment:
+Copy `.env.example` to `.env` at the repo root and set:
 
-```env
-JWT_SECRET=...
-API_PORT=4000
-RT_PORT=4001
-WEB_PORT=5173
-MONGO_URI=mongodb://localhost:27017/realtime_editor
-REDIS_URL=redis://localhost:6379
-```
+| Variable | Purpose |
+|----------|---------|
+| `MONGO_URI` | MongoDB connection string. For Atlas use `mongodb+srv://.../dbname?...` — database name must be in the **path** (`/dbname`), not as a lone query param. |
+| `JWT_ACCESS_SECRET` | Secret for signing **access** JWTs |
+| `JWT_REFRESH_SECRET` | Secret for signing **refresh** JWTs |
+| `API_PORT` | API port (default often `4000`) |
+| `RT_PORT` | Realtime port |
+| `WEB_PORT` | Vite dev port |
+| `REDIS_URL` | Redis (when used) |
+| `NODE_ENV` | `development` / `production` |
+
+## Auth API (Phase 1)
+
+Base URL: `http://localhost:<API_PORT>/api/auth` (see `apps/api`).
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/register` | — | Create user + profile; returns `accessToken`, sets refresh **httpOnly** cookie `token` |
+| `POST` | `/login` | — | Returns `accessToken`, sets refresh cookie |
+| `POST` | `/logout` | — | Clears refresh cookie |
+| `POST` | `/refresh` | Refresh cookie | Returns new `accessToken`, rotates refresh cookie |
+| `GET` | `/me` | `Authorization: Bearer <access>` | Current user + profile fields |
+
+**Frontend:** store **access** in memory; send **`credentials: 'include'`** for routes that use cookies (`login`, `register`, `logout`, `refresh`). On **401**, call **`/refresh`** then retry.
+
+Architecture details: [docs/adr/0001-authentication.md](docs/adr/0001-authentication.md).
 
 ## Local Development
 
@@ -54,7 +74,15 @@ REDIS_URL=redis://localhost:6379
 pnpm install
 ```
 
-2. Start infra (MongoDB + Redis):
+2. Start infra:
+
+- **MongoDB:** [Atlas](https://www.mongodb.com/atlas) (`MONGO_URI` in `.env`), **or** local Mongo:
+
+```bash
+docker compose -f infra/docker-compose.yml --profile local-mongo up -d
+```
+
+- **Redis** (optional until features need it):
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d
@@ -68,11 +96,9 @@ pnpm dev:all
 
 ### Service URLs
 
-- Web: `http://localhost:5173`
+- Web: `http://localhost:5173` (or the port in `apps/web` dev script)
 - API health: `http://localhost:4000/health`
 - Realtime WS: `ws://localhost:4001`
-
-If web port conflicts, update `apps/web/package.json` dev script (for example `--port 4173`) and use that URL.
 
 ## Root Scripts
 
@@ -83,19 +109,16 @@ If web port conflicts, update `apps/web/package.json` dev script (for example `-
 
 ## Current Status
 
-- Monorepo scaffold completed
-- API + Realtime starter servers running
-- Shared package entrypoint added
-- Infra compose file added
-- Next implementation step: **Auth foundation in `apps/api`**
+- Phase 1 **Auth** complete (User + Profile, JWT access + refresh cookie, `/api/auth/*`).
+- **Next:** Phase 2 — Document CRUD + ACL (`owner` / `editor` / `viewer`).
 
 ## Roadmap
 
-1. Auth foundation (`register/login/me/logout`)
-2. Document CRUD + ACL (`owner/editor/viewer`)
+1. ~~Auth foundation~~
+2. Document CRUD + ACL
 3. Realtime room auth + presence events
 4. Yjs collaborative sync + cursor awareness
 5. Snapshot persistence + version history restore
 6. Production hardening (Redis scale-out, security, tests, observability)
 
-Detailed plan: `docs/realtime-editor-execution-plan.md`.
+Detailed plan: [docs/realtime-editor-execution-plan.md](docs/realtime-editor-execution-plan.md).

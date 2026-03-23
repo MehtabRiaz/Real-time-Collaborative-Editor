@@ -11,13 +11,13 @@ overview: Execution-ready plan for your MERN collaborative editor setup, with th
 - Turbo + workspace wiring is mostly done.
 - **Phase 1 (Auth foundation)** — see [ADR-0001: Authentication](adr/0001-authentication.md). JWTs include **`profileId`** (Profile id) for resource ACL.
 - **Phase 2 (Document CRUD + ACL)** — implemented in **`apps/api`**: `Document` + `Collaborator` models, REST CRUD on `/api/documents`, nested `/api/documents/:documentId/collaborators`, ACL in **`documentAcl.ts`** (403/404 via **`catchAcl`**). See [README.md](../README.md) for route tables.
-- **Phase 3 (Realtime room plumbing)** — implemented in **`apps/realtime`**: first-message JWT auth, room join/leave by `documentId`, presence join/leave broadcasts, ACL bridge to API (`GET /api/documents/:id`), and singleton room manager with session-scoped membership.
+- **Phase 3 (Realtime room plumbing)** — implemented in **`apps/realtime`**: first-message JWT auth, room join/leave by `documentId`, presence join/leave events, and ACL bridge via API check.
 
 ## Next Step To Start (Phase 4)
 
-- **Yjs collaboration:** integrate Yjs update sync over current rooms.
-- Add document update/event protocol (Yjs binary updates + awareness state).
-- Connect `apps/web` editor to realtime provider and active document room.
+- **Yjs collaboration:** wire CRDT sync over realtime rooms (`y-websocket` style updates).
+- Connect web editor to provider and document room.
+- Add awareness/cursor broadcasting on top of room membership.
 
 ## Phase 1 - Auth Foundation — Done
 
@@ -32,12 +32,11 @@ overview: Execution-ready plan for your MERN collaborative editor setup, with th
 - **Routes:** `/api/documents` (CRUD + list with permissions); `/api/documents/:documentId/collaborators` (list / get / add / update / remove).
 - **ACL:** Owner full control; **editor** can write document content; **viewer** read-only; collaborator mutations **owner-only**; `documentAcl` + **`catchAcl`** for HTTP status mapping.
 
-## Phase 3 - Realtime Room Plumbing — Done (Realtime)
+## Phase 3 - Realtime Room Plumbing — Done
 
-- Add websocket auth handshake (JWT validation, first-message flow).
-- Add room join/leave by `documentId`.
-- Add presence events (`presence:join` / `presence:leave`) with session-level membership.
-- Add ACL bridge in realtime via API check before room admission.
+- Add websocket auth handshake (JWT validation) — done.
+- Add room join/leave by `documentId` — done.
+- Add presence events (user joined/left/basic cursor state) — done.
 - Full plan: [phase-3-realtime-room-plumbing.md](phase-3-realtime-room-plumbing.md).
 
 ## Phase 4 - Yjs Collaboration
@@ -76,8 +75,8 @@ overview: Execution-ready plan for your MERN collaborative editor setup, with th
 - Users can list/read/update/delete per role rules; **403** / **404** from ACL when appropriate.
 - Collaborators can be managed by **owner** on nested routes; **Collaborator** `_id` used for get/update/delete by id.
 
-## Done Criteria — Phase 3 (Realtime, Met)
+## Done Criteria — Phase 3 (Met)
 
-- Sockets authenticate with access JWT and receive session identity.
-- Authorized users can join/leave document rooms; unauthorized join is denied via ACL bridge.
-- Presence join/leave is broadcast to other room members.
+- Realtime server requires first-message JWT auth and rejects invalid/expired tokens.
+- Authenticated clients can join/leave rooms by `documentId` with room-scoped presence events.
+- Room admission applies document ACL via API check and denies unauthorized access with structured errors.

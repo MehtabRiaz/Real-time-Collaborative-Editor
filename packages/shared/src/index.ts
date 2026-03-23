@@ -1,11 +1,2 @@
-export type UserRole = "owner" | "editor" | "viewer";
-
-export type DocumentPermission = "read" | "comment" | "write" | "admin";
-
-export interface WsEvent<TPayload = unknown> {
-  type: string;
-  documentId: string;
-  userId: string;
-  payload: TPayload;
-  timestamp: number;
-}
+export type { JwtPayload } from "./types/index.js";
+export { signJwtToken, verifyJwtToken } from "./utils/auth.js";
